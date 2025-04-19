@@ -1,0 +1,90 @@
+- hosts: base
+  become: true
+
+  vars_files:
+    - generated/vars.yaml
+  tasks:
+    - name: Check docker
+      shell: docker --version
+      register: docker_check
+      ignore_errors: yes
+
+    - name: Install docker
+      block:
+        - name: Download docker install script
+          get_url:
+            url: https://get.docker.com/
+            dest: /tmp/get-docker.sh
+            mode: '0755'
+
+        - name: Run docker install script
+          shell: sh /tmp/get-docker.sh
+
+        - name: Install docker compose plugin
+          package:
+            name: docker-compose-plugin
+            state: present
+
+      when:
+        - docker_check.rc != 0
+
+
+    - name: Copy database directory to server
+      copy:
+        src: ../database
+        dest: /opt/
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Run docker daemon
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Run database via docker
+      shell: docker compose up -d
+      args:
+        chdir: /opt/database/
+
+    - name: Wait till the database is running
+      wait_for:
+        port: 5432
+        host: 127.0.0.1
+        delay: 5
+        timeout: 60
+        state: started
+
+    - name: Copy config to server
+      copy:
+        src: pg_hba.conf
+        dest: /tmp
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copy config to container
+      shell: docker cp /tmp/pg_hba.conf database:/var/lib/postgresql/data/pg_hba.conf
+
+    - name: Restart database
+      shell: docker restart database
+
+- hosts: connected
+  become: true
+  vars_files:
+    - generated/vars.yaml
+  tasks:
+    - name: Install Postgres client (Ubuntu/Debian)
+      apt:
+        name: postgresql-client
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install PostgresL client (RedHat/CentOS)
+      yum:
+        name: postgresql
+        state: present
+      when: ansible_os_family == "RedHat"
+
+

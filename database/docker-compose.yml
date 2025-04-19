@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  database:
+    image: postgres:17.4
+    container_name: database
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: studentdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - pgdata:/var/lib/postgresql/studentdb/data
+
+  flyway:
+    image: flyway/flyway
+    container_name: flyway
+    command: migrate
+    depends_on:
+      - database
+    volumes:
+      - ./migrations:/flyway/sql
+    environment:
+      - FLYWAY_SCHEMAS=public
+      - FLYWAY_URL=jdbc:postgresql://database:5432/studentdb
+      - FLYWAY_USER=postgres
+      - FLYWAY_PASSWORD=admin
+      - FLYWAY_CLEAN_DISABLED=false
+
+volumes:
+  pgdata:
+
