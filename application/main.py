@@ -21,9 +21,9 @@ if __name__ == "__main__":
 
     # Get arguments
     hostnames = sys.argv[1].split(",")
-    # if len(hostnames) > 2:
-    #     logging.error("Error: expected only two hostnames")
-    #     exit(1)
+    if len(hostnames) > 2:
+        logging.error("Error: expected only two hostnames")
+        exit(1)
 
     # Get server loadings
     loadings = []
@@ -37,8 +37,8 @@ if __name__ == "__main__":
 
     # Get servers groups
     hostnames_sorted = [h for _, h in sorted(zip(loadings, hostnames))]
-    base_server = hostnames_sorted[1]
-    connected_servers = [hostnames_sorted[0]]
+    base_server = hostnames_sorted[0]
+    connected_servers = hostnames_sorted[1:]
     logging.info(f"Base server: {base_server}")
     logging.info(f"Connected servers: {connected_servers}")
 
